@@ -501,11 +501,15 @@ if (typeof module !== 'undefined' && typeof exports !== 'undefined' && module.ex
 
           Oauth2.open = function(options, userData) {
             defaults = utils.merge(options, defaults);
+            var popupWindow;
             var defer = $q.defer();
+
+            if (!window.cordova) {
+              popupWindow = popup.open('', defaults.name, defaults.popupOptions, defaults.redirectUri);
+            }
 
             $timeout(function () {
               var url;
-              var openPopup;
               var stateName = defaults.name + '_state';
 
               if (angular.isFunction(defaults.state)) {
@@ -517,12 +521,19 @@ if (typeof module !== 'undefined' && typeof exports !== 'undefined' && module.ex
               url = [defaults.authorizationEndpoint, Oauth2.buildQueryString()].join('?');
 
               if (window.cordova) {
-                openPopup = popup.open(url, defaults.name, defaults.popupOptions, defaults.redirectUri).eventListener(defaults.redirectUri);
+                popupWindow = popup.open(url, defaults.name, defaults.popupOptions, defaults.redirectUri);
               } else {
-                openPopup = popup.open(url, defaults.name, defaults.popupOptions, defaults.redirectUri).pollPopup(defaults.redirectUri);
+                popupWindow.popupWindow.location = url;
               }
 
-              openPopup
+              var popupListener;
+              if (window.cordova) {
+                popupListener = popupWindow.eventListener(defaults.redirectUri);
+              } else {
+                popupListener = popupWindow.pollPopup(defaults.redirectUri);
+              }
+
+              popupListener
                 .then(function(oauthData) {
                   // When no server URL provided, return popup params as-is.
                   // This is for a scenario when someone wishes to opt out from
